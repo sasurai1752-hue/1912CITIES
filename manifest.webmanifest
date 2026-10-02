@@ -1,0 +1,11 @@
+{
+  "name": "1912CITIES",
+  "short_name": "1912CITIES",
+  "description": "1,741市区町村＋171行政区の訪問記録アプリ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2864e8",
+  "lang": "ja",
+  "orientation": "portrait-primary"
+}
