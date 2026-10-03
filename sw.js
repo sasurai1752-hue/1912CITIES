@@ -1,4 +1,4 @@
-const CACHE="1912cities-v05";
+const CACHE="1912cities-v06";
 const ASSETS=["./","./manifest.webmanifest"];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener("activate",e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))])));
@@ -14,6 +14,8 @@ self.addEventListener("fetch",e=>{
    text=text.replace('<div class="sub">1,741市区町村＋171行政区。通過ではなく、その土地に降り立って何かをしたら制覇。</div>','');
    text=text.replace('制覇率 ${pct()}%','制覇率 ${totalPctHome}%');
    text=text.replace('<div class="cardtitle">マスターデータ</div><div class="stats"><div class="stat"><div class="sl">市区町村</div><div class="sn">1,741</div></div><div class="stat"><div class="sl">行政区</div><div class="sn">171</div></div><div class="stat"><div class="sl">合計</div><div class="sn">1,912</div></div></div><div class="note">アップロードされた自治体マスターを組み込み済み。北方領土6件は標準1,912対象から除外しています。</div>','<div class="cardtitle">制覇数</div><div class="stats"><div class="stat"><div class="sl">市区町村</div><div class="sn">${muniDoneHome}<span style="font-size:12px"> / 1,741</span></div><div class="mm">${muniPctHome}%</div></div><div class="stat"><div class="sl">行政区</div><div class="sn">${adminDoneHome}<span style="font-size:12px"> / 171</span></div><div class="mm">${adminPctHome}%</div></div><div class="stat"><div class="sl">合計</div><div class="sn">${done.size}<span style="font-size:12px"> / 1,912</span></div><div class="mm">${totalPctHome}%</div></div></div><div class="note">北方領土の6村（色丹村、泊村、留夜別村、留別村、紗那村、蘂取村）は対象外としています。</div>');
+   text=text.replace('font-size:12px}.input:focus','font-size:16px}.input:focus');
+   text=text.replace('$("search").oninput=e=>{q=e.target.value;pageNo=1;render()};','$("search").oninput=e=>{q=e.target.value;pageNo=1;const pos=e.target.selectionStart;render();const next=$("search");if(next){next.focus({preventScroll:true});try{next.setSelectionRange(pos,pos)}catch(_){}}};');
    return new Response(text,{status:resp.status,statusText:resp.statusText,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
   }).catch(()=>caches.match("./")));
   return;
