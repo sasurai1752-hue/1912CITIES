@@ -494,7 +494,7 @@ async function importData(file){
   safe.push(item);
  }
  const profile=data.profile&&typeof data.profile==="object"?data.profile:null;
- const profileValid=profile&&typeof profile.name==="string"&&typeof profile.id==="string"&&typeof profile.since==="string"&&profile.name.length<=28&&profile.id.length<=100&&/^\d{4}-\d{2}-\d{2}$/.test(profile.since);
+ const profileValid=profile&&typeof profile.name==="string"&&typeof profile.id==="string"&&typeof profile.since==="string"&&profile.name.length<=28&&profile.id.length<=100&&(!profile.since||/^\d{4}-\d{2}-\d{2}$/.test(profile.since));
  const uniqueNew=new Set(safe.map(v=>v.code)).size;
  const confirmed=confirm("バックアップに訪問記録 "+safe.length+"件（制覇対象 "+uniqueNew+"件）が含まれています。\n現在の訪問記録 "+visits.length+"件を置き換えます。\n"+(profileValid?"ライセンス情報も復元します。":"ライセンス情報は現在のままです。")+"\n\n復元前に現在のデータをバックアップしてありますか？");
  if(!confirmed)return;
@@ -504,7 +504,7 @@ async function importData(file){
   if(profileValid){
    localStorage.setItem("1912-license-name",profile.name);
    localStorage.setItem("1912-license-id",profile.id);
-   localStorage.setItem("1912-license-since",profile.since);
+   if(profile.since)localStorage.setItem("1912-license-since",profile.since);else localStorage.removeItem("1912-license-since");
   }
  }catch(e){
   if(previous===null)localStorage.removeItem("1912-visits-v2");else localStorage.setItem("1912-visits-v2",previous);
