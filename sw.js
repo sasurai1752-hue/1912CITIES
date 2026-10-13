@@ -1,5 +1,5 @@
-// 1912CITIES v0.46: navigation network-first, never rewrite HTML in the service worker.
-const CACHE="1912cities-static-v0.46";
+// 1912CITIES v0.47: navigation network-first, never rewrite HTML in the service worker.
+const CACHE="1912cities-static-v0.47";
 self.addEventListener("install",event=>{self.skipWaiting()});
 self.addEventListener("activate",event=>{
  event.waitUntil((async()=>{
