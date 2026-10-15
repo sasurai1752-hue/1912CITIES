@@ -400,10 +400,10 @@ async function restoreCloudBackup(){
   const {data}=await cloudFetch();
   if(!data){cloudSetStatus("クラウド保存なし");alert("まだクラウドに保存された記録がありません。");return}
   const {safe,profile}=cloudValidate(data.payload);
-  if(!confirm("クラウド保存："+new Date(data.updated_at).toLocaleString("ja-JP")+"\\nクラウドの訪問記録 "+safe.length+"件で、この端末の "+visits.length+"件を置き換えます。\\n\\n端末の写真は削除しませんが、別端末へは移りません。\\n続行すると、復元前の写真込みバックアップをダウンロードします。")){cloudSetStatus("復元をキャンセルしました");return}
+  if(!confirm("クラウド保存："+new Date(data.updated_at).toLocaleString("ja-JP")+"\nクラウドの訪問記録 "+safe.length+"件で、この端末の "+visits.length+"件を置き換えます。\n\n端末の写真は削除しませんが、別端末へは移りません。\n続行すると、復元前の写真込みバックアップをダウンロードします。")){cloudSetStatus("復元をキャンセルしました");return}
   cloudSetStatus("復元前のバックアップ作成中…");
   await downloadPreRestoreBackup();
-  if(!confirm("復元前のJSONバックアップがダウンロードされ、ファイルとして保存できたことを確認しましたか？\\n\\n確認できない場合は「キャンセル」を押してください。\\nOKで端末の訪問記録 "+visits.length+"件をクラウドの "+safe.length+"件に置き換えます。")){cloudSetStatus("復元をキャンセルしました");return}
+  if(!confirm("復元前のJSONバックアップがダウンロードされ、ファイルとして保存できたことを確認しましたか？\n\n確認できない場合は「キャンセル」を押してください。\nOKで端末の訪問記録 "+visits.length+"件をクラウドの "+safe.length+"件に置き換えます。")){cloudSetStatus("復元をキャンセルしました");return}
   const prior={visits:localStorage.getItem("1912-visits-v2"),name:localStorage.getItem("1912-license-name"),id:localStorage.getItem("1912-license-id"),since:localStorage.getItem("1912-license-since")};
   const localPhotoIds=new Set(visits.filter(v=>v.photoSaved).map(v=>v.id));
   for(const item of safe){if(localPhotoIds.has(item.id))item.photoSaved=true;else if(item.verification==="photo")item.verification="self"}
