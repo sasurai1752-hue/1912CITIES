@@ -456,22 +456,19 @@ function achievementStats(){
  const first=visits.filter(v=>done.has(v.code));
  const dates=new Map(),byPref=new Map();
  const visitedPrefs=new Set(),photoIds=new Set(),gpsIds=new Set();
- const counts=new Map();
  for(const m of MUNICIPALITIES){
   if(!byPref.has(m.pref))byPref.set(m.pref,{total:0,done:0});
   const s=byPref.get(m.pref);s.total++;if(done.has(m.code)){s.done++;visitedPrefs.add(m.pref)}
  }
  for(const v of first){
   if(/^\d{4}-\d{2}-\d{2}$/.test(v.date||""))dates.set(v.date,(dates.get(v.date)||0)+1);
-  counts.set(v.code,(counts.get(v.code)||0)+1);
   if(v.photoSaved)photoIds.add(v.code);
   if(v.verification==="gps"&&v.gps&&Number.isFinite(v.gps.latitude)&&Number.isFinite(v.gps.longitude))gpsIds.add(v.code);
  }
  return {unique,visitedPrefs:visitedPrefs.size,completedPrefs:[...byPref.values()].filter(s=>s.total>0&&s.done===s.total).length,
  wards:MUNICIPALITIES.filter(m=>m.type==="行政区"&&done.has(m.code)).length,
  tokyoWards:MUNICIPALITIES.filter(m=>m.pref==="東京都"&&m.type==="特別区"&&done.has(m.code)).length,
- days:dates.size,maxDay:Math.max(0,...dates.values()),photo:photoIds.size,gps:gpsIds.size,
- revisits:[...counts.values()].filter(n=>n>=2).length};
+ days:dates.size,maxDay:Math.max(0,...dates.values()),photo:photoIds.size,gps:gpsIds.size};
 }
 function achievementDefinitions(s){
  const defs=[];
@@ -491,7 +488,6 @@ function achievementDefinitions(s){
  add("day-10","🚀","一日十自治体","同じ日に10件の訪問記録をつける",s.maxDay,10,"旅の記録");
  add("photo-1","📸","旅の一枚","写真を保存した自治体が1件",s.photo,1,"旅の記録");
  add("gps-1","📍","現地の証明","GPSで訪問を記録した自治体が1件",s.gps,1,"旅の記録");
- add("revisit-1","🔁","再訪の旅人","同じ自治体を2回以上訪問記録",s.revisits,1,"旅の記録");
  return defs;
 }
 function openAchievements(){page="achievements";achievementFilter="all";render();window.scrollTo(0,0)}
