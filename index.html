@@ -473,18 +473,31 @@ function achievementStats(){
  days:dates.size,maxDay:Math.max(0,...dates.values()),photo:photoIds.size,gps:gpsIds.size,
  revisits:[...counts.values()].filter(n=>n>=2).length};
 }
+const PREF_TITLES=[["北海道","北の大地を極めし者"],["青森県","津軽と南部を統べる者"],["岩手県","みちのくの開拓者"],["宮城県","杜の都を越えし者"],["秋田県","出羽の山河を巡りし者"],["山形県","最上の風を追う者"],["福島県","浜・中・会津を繋ぐ者"],["茨城県","常陸の大地を駆けし者"],["栃木県","下野の道を究めし者"],["群馬県","上毛三山の旅人"],["埼玉県","武蔵野を巡りし者"],["千葉県","房総を極めし者"],["東京都","江戸から島々への旅人"],["神奈川県","相模と武蔵を結ぶ者"],["新潟県","越後の雪原を越えし者"],["富山県","立山連峰の探訪者"],["石川県","加賀と能登を統べる者"],["福井県","越前若狭の旅人"],["山梨県","甲斐の山々を制する者"],["長野県","信州の峰々を越えし者"],["岐阜県","飛騨美濃を究めし者"],["静岡県","富士と遠州を巡りし者"],["愛知県","尾張三河を統べる者"],["三重県","伊勢志摩と伊賀の旅人"],["滋賀県","近江八景を越えし者"],["京都府","千年の都と丹後を巡る者"],["大阪府","浪花の街道を極めし者"],["兵庫県","五国を巡りし者"],["奈良県","大和の古道を辿る者"],["和歌山県","紀伊の山海を極めし者"],["鳥取県","因幡伯耆の旅人"],["島根県","出雲石見隠岐を巡る者"],["岡山県","吉備の国を究めし者"],["広島県","安芸備後を統べる者"],["山口県","長州の道を極めし者"],["徳島県","阿波の山河を巡る者"],["香川県","讃岐の風を追う者"],["愛媛県","伊予の海と山を究めし者"],["高知県","土佐の果てまで巡りし者"],["福岡県","筑前筑後豊前を巡る者"],["佐賀県","肥前の道を究めし者"],["長崎県","海峡と島々の探訪者"],["熊本県","火の国を極めし者"],["大分県","豊後の山海を巡る者"],["宮崎県","日向の太陽を追う者"],["鹿児島県","薩摩大隅と島々の覇者"],["沖縄県","琉球の島々を巡りし者"]];
+const REGION_TITLES=[["北海道","北の大地の覇者",["北海道"]],["東北","みちのくの覇者",["青森県","岩手県","宮城県","秋田県","山形県","福島県"]],["関東","関八州の覇者",["茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県"]],["中部","日本の屋根を越えし者",["新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県"]],["近畿","千年の都を巡りし者",["三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県"]],["中国","山陰山陽の覇者",["鳥取県","島根県","岡山県","広島県","山口県"]],["四国","四国を極めし者",["徳島県","香川県","愛媛県","高知県"]],["九州・沖縄","南国の覇者",["福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"]]];
 function achievementDefinitions(s){
  const defs=[];
- const add=(id,icon,name,desc,value,target,group)=>defs.push({id,icon,name,desc,value,target,group,unlocked:value>=target});
- for(const n of [1,10,50,100,250,500,1000,1912])add("total-"+n,"🏅",n===1912?"1912CITIES 完全制覇":n+"自治体制覇",n===1912?"全国1,912対象をすべて制覇":"異なる自治体・行政区を"+n+"件制覇",s.unique,n,"制覇数");
- add("pref-1","🗾","はじめての都道府県","1都道府県で訪問記録をつける",s.visitedPrefs,1,"地域");
- add("pref-10","🧭","十都道府県踏破","10都道府県で訪問記録をつける",s.visitedPrefs,10,"地域");
- add("pref-47","🌏","全国行脚","47都道府県で訪問記録をつける",s.visitedPrefs,47,"地域");
- add("pref-complete-1","👑","一県完全制覇","1都道府県の全対象を制覇",s.completedPrefs,1,"地域");
- add("pref-complete-5","🏆","五県完全制覇","5都道府県の全対象を制覇",s.completedPrefs,5,"地域");
- add("wards-10","🏙️","区めぐり入門","政令指定都市の行政区を10区制覇",s.wards,10,"地域");
- add("wards-171","🌆","171区完全制覇","政令指定都市の行政区171区を制覇",s.wards,171,"地域");
- add("tokyo-23","🗼","東京23区制覇","東京都の特別区23区を制覇",s.tokyoWards,23,"地域");
+ const add=(id,icon,name,desc,value,target,group)=>defs.push({id,icon,name,desc,value,target,group,unlocked:target>0&&value>=target});
+ const done=realDoneCodes(),byPref=new Map();
+ for(const m of MUNICIPALITIES){
+  // 政令指定都市の行政区だけを除外。東京都の特別区は自治体として判定する。
+  if(m.type==="行政区")continue;
+  if(!byPref.has(m.pref))byPref.set(m.pref,{total:0,done:0});
+  const p=byPref.get(m.pref);p.total++;if(done.has(m.code))p.done++;
+ }
+ for(const [pref,title] of PREF_TITLES){
+  const p=byPref.get(pref)||{total:0,done:0};
+  add("pref-title-"+pref,"🏅",title,pref+"の全市区町村を制覇（政令市の行政区を除く）",p.done,p.total||1,"都道府県称号");
+ }
+ for(const [region,title,prefs] of REGION_TITLES){
+  const completed=prefs.filter(pref=>{const p=byPref.get(pref);return p&&p.total>0&&p.done===p.total}).length;
+  add("region-title-"+region,"👑",title,region+"地方の全都道府県を制覇",completed,prefs.length,"地方称号");
+ }
+ add("japan-47","🗾","日本全土の覇者","47都道府県の全市区町村を制覇（政令市の行政区を除く）",
+ [...byPref.values()].filter(p=>p.total>0&&p.done===p.total).length,47,"全国称号");
+ add("japan-1912","🌏","1912CITIES GRAND MASTER","行政区を含む1,912対象を完全制覇",s.unique,1912,"全国称号");
+ add("wards-171","🌆","171区完全制覇","政令指定都市の行政区171区を制覇",s.wards,171,"特別実績");
+ add("tokyo-23","🗼","東京23区制覇","東京都の特別区23区を制覇",s.tokyoWards,23,"特別実績");
  add("days-5","📅","旅の習慣","異なる5日で訪問を記録",s.days,5,"旅の記録");
  add("days-30","🗓️","旅の達人","異なる30日で訪問を記録",s.days,30,"旅の記録");
  add("day-5","⚡","一日五自治体","同じ日に5件の訪問記録をつける",s.maxDay,5,"旅の記録");
