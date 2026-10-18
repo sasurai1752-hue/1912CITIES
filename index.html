@@ -716,13 +716,13 @@ function renderAchievements(){
  <div class="note" style="margin-top:15px">実績は端末内の訪問記録に応じて自動更新されます。クラウドから訪問記録を復元した場合も再計算されます。実績だけを別途保存・同期することはありません。</div>`;
 }
 
-let conquestMap=null,conquestInsets=[],conquestPref="",conquestSeq=0;
+let conquestMap=null,conquestInsets=[],conquestPref="",conquestSeq=0,conquestAreaCodes=null,conquestAreaTitle="";
 const conquestGeoBase="https://cdn.jsdelivr.net/gh/kyodo-official/japan-choropleth@main/data/geojson/";
 function conquestStats(){const d=realDoneCodes(),r=new Map();for(const m of MUNICIPALITIES){if(!r.has(m.pref))r.set(m.pref,{name:m.pref,code:m.code.slice(0,2),total:0,done:0});const x=r.get(m.pref);x.total++;if(d.has(m.code))x.done++}return r}
-function conquestOpenPref(n){conquestPref=n;render();window.scrollTo(0,0)}
+function conquestOpenPref(n){conquestPref=n;conquestAreaCodes=null;conquestAreaTitle="";render();window.scrollTo(0,0)}
 function conquestHtml(){
  const stats=conquestStats(),x=stats.get(conquestPref),all=[...stats.values()],n=x?x.done:all.reduce((a,v)=>a+v.done,0),t=x?x.total:all.reduce((a,v)=>a+v.total,0);
- return '<div class="eyebrow">CONQUEST MAP</div><div class="title">制覇マップ</div><section class="card"><div class="map-topline"><div class="cardtitle">'+(x?x.name:'日本全国')+'</div>'+(x?'<button type="button" class="btn" onclick="conquestOpenPref(\'\')">← 全国へ</button>':'')+'</div><div class="sub">'+(x?'市区町村・行政区を塗り分け':'47都道府県を制覇率で色分け')+'</div><div class="map-summary">'+n+' / '+t+' 市区町村制覇 · '+(n/t*100).toFixed(1)+'%</div><div id="conquestMap" aria-label="制覇マップ"></div>'+(x&&conquestRegions[x.name]?'<div class="conquest-inset-title">地域別の拡大図</div><div class="conquest-insets">'+conquestRegions[x.name].insets.map((r,i)=>'<div class="conquest-inset"><div class="conquest-inset-label">'+r.label+'</div><div id="conquestInset'+i+'" class="conquest-inset-map"></div></div>').join('')+'</div>':'')+'<div class="map-legend">0% <span class="map-gradient"></span> 100%</div><div id="conquestSelection" class="map-selection">地図をタップすると詳細を表示します。</div><div id="conquestStatus" class="sub" style="margin-top:12px">地図を読み込み中…</div><div class="sub" style="font-size:11px;margin-top:14px">地図出典：国土交通省「国土数値情報 行政区域データ（2025年版）」を加工した共同通信社 japan-choropleth。地図の境界は簡略化されています。</div></section>';
+ return '<div class="eyebrow">CONQUEST MAP</div><div class="title">'+(conquestAreaCodes?esc(conquestAreaTitle)+' · エリアマップ':'制覇マップ')+'</div><section class="card"><div class="map-topline"><div class="cardtitle">'+(x?x.name:'日本全国')+'</div>'+(x?'<button type="button" class="btn" onclick="conquestOpenPref(\'\')">← 全国へ</button>':'')+'</div><div class="sub">'+(x?'市区町村・行政区を塗り分け':'47都道府県を制覇率で色分け')+'</div><div class="map-summary">'+n+' / '+t+' 市区町村制覇 · '+(n/t*100).toFixed(1)+'%</div><div id="conquestMap" aria-label="制覇マップ"></div>'+(x&&conquestRegions[x.name]?'<div class="conquest-inset-title">地域別の拡大図</div><div class="conquest-insets">'+conquestRegions[x.name].insets.map((r,i)=>'<div class="conquest-inset"><div class="conquest-inset-label">'+r.label+'</div><div id="conquestInset'+i+'" class="conquest-inset-map"></div></div>').join('')+'</div>':'')+'<div class="map-legend">0% <span class="map-gradient"></span> 100%</div><div id="conquestSelection" class="map-selection">地図をタップすると詳細を表示します。</div><div id="conquestStatus" class="sub" style="margin-top:12px">地図を読み込み中…</div><div class="sub" style="font-size:11px;margin-top:14px">地図出典：国土交通省「国土数値情報 行政区域データ（2025年版）」を加工した共同通信社 japan-choropleth。地図の境界は簡略化されています。</div></section>';
 }
 const conquestRegions={
  "東京都":{main:[[35.45,138.85],[36.05,140.05]],insets:[
@@ -761,7 +761,8 @@ async function conquestDraw(){
   const layer=L.geoJSON(geo,{style:f=>{
     const id=String(f.id??f.properties?.id??"");const m=pref?byCode.get(id):byPrefCode.get(id.padStart(2,"0"));
     const rate=pref?(m&&done.has(m.code)?1:0):(m?m.done/m.total:0);
-    return {color:"#fff",weight:0.8,fillColor:fill(rate),fillOpacity:0.95};
+    const outside=conquestAreaCodes&&(pref?!m||!conquestAreaCodes.has(m.code):!m||!MUNICIPALITIES.some(x=>x.pref===m.name&&conquestAreaCodes.has(x.code)));
+    return {color:"#fff",weight:0.8,fillColor:outside?"#dce1e8":fill(rate),fillOpacity:outside?0.22:0.95};
    },onEachFeature:(f,shape)=>{
     const id=String(f.id??f.properties?.id??"");
     if(pref){
@@ -775,8 +776,18 @@ async function conquestDraw(){
     }
    }}).addTo(conquestMap);
   const bounds=layer.getBounds();
+  let areaBounds=null;
+  if(conquestAreaCodes){
+   const filtered=L.geoJSON(geo,{filter:f=>{
+    const id=String(f.id??f.properties?.id??"");
+    if(pref){const m=byCode.get(id);return !!m&&conquestAreaCodes.has(m.code)}
+    const p=byPrefCode.get(id.padStart(2,"0"));return !!p&&MUNICIPALITIES.some(m=>m.pref===p.name&&conquestAreaCodes.has(m.code));
+   }});
+   if(filtered.getBounds().isValid())areaBounds=filtered.getBounds();
+  }
   const region=conquestRegions[pref];
-  if(region){
+  if(areaBounds){conquestMap.fitBounds(areaBounds,{padding:[16,16],maxZoom:10})}
+  else if(region){
    conquestMap.fitBounds(L.latLngBounds(region.main),{padding:[12,12],maxZoom:11});
    for(let i=0;i<region.insets.length;i++){
     const r=region.insets[i],node=document.getElementById("conquestInset"+i);
@@ -796,7 +807,7 @@ async function conquestDraw(){
    }
   }else if(pref){if(bounds.isValid())conquestMap.fitBounds(bounds,{padding:[12,12],maxZoom:10})}
   else{conquestMap.setView([35.7,139.7],7,{animate:false})}
-  status.textContent=pref?(region?"本土・本島を中心に表示しています。離島は下の地域別拡大図から確認できます。":"自治体をタップすると制覇状況が表示されます。"):"関東を中心に表示しています。ドラッグ・縮小で全国の都道府県へ移動できます。";
+  status.textContent=conquestAreaCodes?'選択エリアの市区町村を強調表示しています。地図をタップすると制覇状況が表示されます。':pref?(region?"本土・本島を中心に表示しています。離島は下の地域別拡大図から確認できます。":"自治体をタップすると制覇状況が表示されます。"):"関東を中心に表示しています。ドラッグ・縮小で全国の都道府県へ移動できます。";
   requestAnimationFrame(()=>conquestMap?.invalidateSize());
  }catch(e){if(seq===conquestSeq)status.textContent="地図データを読み込めませんでした。通信状態を確認してください。（"+e.message+"）"}
 }
@@ -842,7 +853,7 @@ function areaSaveEdit(){
  areaEditing=null;areaSearch="";areaSave();render();
 }
 function areaDelete(id){const a=myAreas.find(a=>a.id===id);if(!a||!confirm("「"+a.name+"」を削除しますか？ 訪問記録は削除されません。"))return;myAreas=myAreas.filter(a=>a.id!==id);areaSelected=null;areaSave();render()}
-function areaOpenMap(id){const a=areaGet(id);if(!a)return;conquestAreaCodes=new Set(a.codes);const prefs=[...new Set(a.codes.map(c=>byCode(c)?.pref).filter(Boolean))];conquestPref=prefs.length===1?prefs[0]:"";page="map";render();window.scrollTo(0,0)}
+function areaOpenMap(id){const a=areaGet(id);if(!a)return;conquestAreaCodes=new Set(a.codes);conquestAreaTitle=a.name;const prefs=[...new Set(a.codes.map(c=>byCode(c)?.pref).filter(Boolean))];conquestPref=prefs.length===1?prefs[0]:"";page="map";render();window.scrollTo(0,0)}
 function areaHtml(){
  const prefs=[...new Set(MUNICIPALITIES.map(m=>m.pref))];
  let html='<div class="eyebrow">AREA CONQUEST</div><div class="title">エリア別制覇</div><div class="area-switch"><button class="btn '+(areaMode==="standard"?"primary":"")+'" onclick="areaSetMode(\'standard\')">標準エリア</button><button class="btn '+(areaMode==="custom"?"primary":"")+'" onclick="areaSetMode(\'custom\')">マイエリア</button></div>';
