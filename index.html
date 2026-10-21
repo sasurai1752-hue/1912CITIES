@@ -1045,7 +1045,20 @@ let routeExpandedStep=-1,routeAdding=false;
 function routeAddStep(kind="move"){routeSyncHeader();if(!routeEditing)return;routeEditing.steps.push({kind,date:routeEditing.start||"",time:"",endTime:"",place:"",to:"",line:"",fare:"",platform:"",nextLine:"",nextPlatform:"",code:"",memo:""});routeExpandedStep=routeEditing.steps.length-1;routeAdding=false;render()}
 function routeToggleStep(i){routeSyncHeader();routeExpandedStep=routeExpandedStep===i?-1:i;render()}
 function routeToggleAdding(){routeSyncHeader();routeAdding=!routeAdding;render()}
+function routeUpdateLineColor(input){const node=input?.closest("label");if(!node)return;const dot=node.querySelector(".route-line-dot");if(dot)dot.style.background=routeLineColor(input.value)||"var(--muted,#999)"}
 function routeStepChange(i,k,v){if(routeEditing?.steps[i]){routeEditing.steps[i][k]=v;if(k==="kind"){routeSyncHeader();routeExpandedStep=i;render()}}}
+function routeLineColor(name){
+ const n=String(name||"").normalize("NFKC").replace(/[\s　・]/g,"").toLowerCase();
+ const rules=[
+ [/東西線/, "#00A7DB"],[/丸ノ内線/, "#E60012"],[/銀座線/, "#F39700"],[/日比谷線/, "#B5B5AC"],[/千代田線/, "#009944"],[/南北線/, "#00ADA9"],[/有楽町線/, "#D7C447"],[/半蔵門線/, "#9B7CB6"],[/副都心線/, "#9C5E31"],
+ [/浅草線/, "#E85298"],[/三田線/, "#0079C2"],[/新宿線/, "#6CBB5A"],[/大江戸線/, "#B6007A"],
+ [/山手線/, "#9ACD32"],[/京浜東北|根岸線/, "#00B2E5"],[/中央.*快速|中央線快速/, "#F15A22"],[/中央.*総武|総武.*各駅/, "#FFD400"],[/総武快速|横須賀線/, "#0074BE"],[/京葉線/, "#C9252D"],[/武蔵野線/, "#F15A22"],[/埼京線/, "#00AC9A"],[/常磐.*快速/, "#00A95F"],[/常磐.*各駅/, "#8BCB9B"],[/東海道線|宇都宮線|高崎線|上野東京ライン|湘南新宿ライン/, "#F68B1E"],
+ [/京成.*本線|京成本線/, "#005AAA"],[/京成.*押上/, "#E85298"],[/京成.*千葉/, "#005AAA"],[/北総線|北総鉄道/, "#009CD3"],[/新京成/, "#E95383"],[/東葉高速/, "#F6A800"],[/京葉高速/, "#F6A800"],[/東武.*東上/, "#004098"],[/東武.*スカイツリー|伊勢崎線/, "#0F6CC3"],[/西武.*池袋/, "#F7A600"],[/西武.*新宿/, "#00A650"],[/京王.*井の頭/, "#0066B3"],[/京王線/, "#DD0077"],[/小田急/, "#0085CE"],[/東急.*東横/, "#DA0442"],[/東急.*田園都市/, "#20A288"],[/東急.*目黒/, "#009CD2"],[/東急.*大井町/, "#F18C43"],[/りんかい線/, "#00A7DB"],[/ゆりかもめ/, "#007AC2"],[/つくばエクスプレス|TX/, "#C90066"],
+ [/御堂筋線/, "#E5171F"],[/谷町線/, "#522886"],[/四つ橋線/, "#0078BA"],[/中央線.*大阪|大阪.*中央線/, "#019A66"],[/堺筋線/, "#814721"],[/阪急.*京都/, "#732E41"],[/阪急.*神戸/, "#00685B"],[/阪急.*宝塚/, "#EA5504"],[/阪神/, "#1F64B1"]
+ ];
+ return rules.find(([re])=>re.test(n))?.[1]||"";
+}
+function routeLineBadge(name){const color=routeLineColor(name);return '<span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:'+(color||'var(--muted,#999)')+'"></span>'+esc(String(name||""))+'</span>'}
 function routePreviousLine(i){if(!routeEditing)return "";for(let j=i-1;j>=0;j--){const t=routeEditing.steps[j];if(t.kind==="move"&&t.line)return t.line;if(t.kind==="transfer"&&t.nextLine)return t.nextLine;}return ""}
 function routeAddTransfer(){routeAddStep("transfer")}
 function routeStepMove(i,d){routeSyncHeader();if(!routeEditing)return;const j=i+d;if(j<0||j>=routeEditing.steps.length)return;[routeEditing.steps[i],routeEditing.steps[j]]=[routeEditing.steps[j],routeEditing.steps[i]];routeExpandedStep=j;render()}
@@ -1063,7 +1076,7 @@ function routeSave(){
 function routeDelete(id){const r=routeLogs.find(x=>x.id===id);if(!r||!confirm("「"+r.name+"」のルートメモを削除しますか？ 訪問記録と制覇計画は残ります。"))return;routeLogs=routeLogs.filter(x=>x.id!==id);routeStore();routeCancel()}
 function routeForm(){
  const x=routeEditing,types=[["move","移動"],["transfer","乗り換え"],["visit","市区町村への訪問"],["stop","立ち寄り・滞在"]],e=v=>esc(String(v??""));
- const input=(i,k,label,placeholder="",type="text")=>'<label>'+label+'<input class="input" type="'+type+'" value="'+e(x.steps[i][k])+'" oninput="routeStepChange('+i+',\''+k+'\',this.value)" placeholder="'+placeholder+'"></label>';
+ const input=(i,k,label,placeholder="",type="text")=>'<label>'+label+(k==='line'||k==='nextLine'?'<span class="route-line-dot" aria-hidden="true" style="display:inline-block;width:12px;height:12px;margin-left:7px;border-radius:3px;background:'+(routeLineColor(x.steps[i][k])||'var(--muted,#999)')+'"></span>':'')+'<input class="input" type="'+type+'" value="'+e(x.steps[i][k])+'" oninput="routeStepChange('+i+',\''+k+'\',this.value);'+(k==='line'||k==='nextLine'?'routeUpdateLineColor(this);':'')+'" placeholder="'+placeholder+'"></label>';
  let h='<section class="card"><button class="btn" onclick="routeCancel()">← 戻る</button><div class="cardtitle" style="margin-top:14px">ルートメモを'+(x.id?'編集':'作成')+'</div><label class="field">遠征名</label><input class="input" id="routeName" maxlength="100" value="'+e(x.name)+'" placeholder="例：東京23区制覇"><div class="route-fields"><label>開始日<input class="input" type="date" id="routeStart" value="'+e(x.start)+'"></label><label>終了日<input class="input" type="date" id="routeEnd" value="'+e(x.end)+'"></label></div><label class="field">区分</label><select class="input" id="routeStatus"><option value="planned" '+(x.status==="planned"?'selected':'')+'>これからの予定</option><option value="completed" '+(x.status==="completed"?'selected':'')+'>過去・実施済み</option></select><label class="field">全体メモ</label><textarea class="input" id="routeMemo" rows="2">'+e(x.memo)+'</textarea><div class="cardtitle" style="margin-top:20px">行程表（'+x.steps.length+'件）</div>';
  x.steps.forEach((t,i)=>{
   const label=types.find(z=>z[0]===t.kind)?.[1]||"行程";
@@ -1074,7 +1087,7 @@ function routeForm(){
    h+='<label>種類<select class="input" onchange="routeStepChange('+i+',\'kind\',this.value)">'+types.map(([v,l])=>'<option value="'+v+'" '+(t.kind===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label>';
    h+='<div class="route-fields">'+input(i,'date','日付','','date')+input(i,'time',t.kind==='transfer'?'到着時刻':t.kind==='move'?'出発時刻':'到着・開始時刻','','time')+input(i,'endTime',t.kind==='transfer'?'次の出発時刻':t.kind==='move'?'到着時刻':'出発・終了時刻','','time')+'</div>';
    if(t.kind==='move')h+=input(i,'place','出発地','例：東京駅')+input(i,'to','到着地','例：大手町駅')+input(i,'line','路線・交通手段','例：徒歩・東京メトロ')+input(i,'fare','運賃（円）','例：230');
-   else if(t.kind==='transfer'){const prev=routePreviousLine(i);h+=input(i,'place','乗り換え駅','例：大手町駅')+(prev?'<div class="field">乗り換え前の路線（前の行程から自動表示）：<strong>'+e(prev)+'</strong></div>':input(i,'line','乗り換え前の路線','例：丸ノ内線'))+input(i,'platform','到着ホーム・番線','例：1番線')+input(i,'nextLine','乗り換え後の路線','例：東西線')+input(i,'nextPlatform','乗車ホーム・番線','例：3番線');}
+   else if(t.kind==='transfer'){const prev=routePreviousLine(i);h+=input(i,'place','乗り換え駅','例：大手町駅')+(prev?'<div class="field">乗り換え前の路線（前の行程から自動表示）：<strong>'+routeLineBadge(prev)+'</strong></div>':input(i,'line','乗り換え前の路線','例：丸ノ内線'))+input(i,'platform','到着ホーム・番線','例：1番線')+input(i,'nextLine','乗り換え後の路線','例：東西線')+input(i,'nextPlatform','乗車ホーム・番線','例：3番線');}
    else h+=input(i,'place',t.kind==='visit'?'訪問地点':'立ち寄り先','例：千代田区役所');
    h+='<label>メモ<textarea class="input" rows="2" maxlength="1000" oninput="routeStepChange('+i+',\'memo\',this.value)">'+e(t.memo)+'</textarea></label><button class="btn" onclick="routeStepDelete('+i+')">この行程を削除</button>';
   }
