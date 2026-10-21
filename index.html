@@ -1061,8 +1061,8 @@ function routeLineColor(name){
 const ROUTE_LINE_OPTIONS=["東京メトロ銀座線","東京メトロ丸ノ内線","東京メトロ日比谷線","東京メトロ東西線","東京メトロ千代田線","東京メトロ有楽町線","東京メトロ半蔵門線","東京メトロ南北線","東京メトロ副都心線","都営浅草線","都営三田線","都営新宿線","都営大江戸線","JR山手線","JR京浜東北線","JR中央線快速","JR中央・総武線各駅停車","JR総武快速線","JR横須賀線","JR京葉線","JR武蔵野線","JR埼京線","JR常磐線快速","JR常磐線各駅停車","JR東海道線","JR宇都宮線","JR高崎線","京成本線","京成押上線","京成千葉線","北総線","東葉高速線","東武東上線","東武スカイツリーライン","西武池袋線","西武新宿線","京王線","京王井の頭線","小田急小田原線","東急東横線","東急田園都市線","東急目黒線","東急大井町線","りんかい線","ゆりかもめ","つくばエクスプレス","大阪メトロ御堂筋線","大阪メトロ谷町線","大阪メトロ四つ橋線","大阪メトロ堺筋線","阪急京都線","阪急神戸線","阪急宝塚線","阪神本線"];
 function routeLineSuggestions(input){
  const panel=input?.parentElement?.querySelector(".route-line-suggestions");if(!panel)return;
- const q=String(input.value||"").normalize("NFKC").replace(/[\\s　・]/g,"").toLowerCase();
- const options=ROUTE_LINE_OPTIONS.filter(n=>n.normalize("NFKC").replace(/[\\s　・]/g,"").toLowerCase().includes(q)).slice(0,8);
+ const q=String(input.value||"").normalize("NFKC").replace(/[\s　・]/g,"").toLowerCase();
+ const options=ROUTE_LINE_OPTIONS.filter(n=>n.normalize("NFKC").replace(/[\s　・]/g,"").toLowerCase().includes(q)).slice(0,8);
  panel.replaceChildren();
  options.forEach(name=>{const button=document.createElement("button");button.type="button";button.className="btn";button.style.cssText="display:flex;align-items:center;gap:8px;width:100%;text-align:left;margin:2px 0";const dot=document.createElement("span");dot.style.cssText="width:12px;height:12px;flex-shrink:0;border-radius:3px;background:"+(routeLineColor(name)||"var(--muted,#999)");button.append(dot,document.createTextNode(name));button.addEventListener("pointerdown",e=>e.preventDefault());button.addEventListener("click",()=>{input.value=name;input.dispatchEvent(new Event("input",{bubbles:true}));panel.hidden=true;input.focus()});panel.append(button)});
  panel.hidden=options.length===0;
