@@ -392,6 +392,7 @@ main{padding:26px 24px}.eyebrow{font-size:10px;color:var(--b);font-weight:900;le
 .route-catalog-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:700}
 .route-catalog-hex{font-size:11px;color:var(--muted);white-space:nowrap}
 
+.route-catalog-ref{display:inline-block;font-size:10px;font-weight:600;color:var(--muted);margin-left:8px;white-space:nowrap}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1133,6 +1134,9 @@ function routeForm(){
  return h;
 }
 
+// 「参考色」は公式の路線別カラーを確認できていない場合の表示色。
+const ROUTE_LINE_REFERENCE_PREFIXES=["阿武隈急行","会津鉄道","三陸鉄道","秋田内陸縦貫鉄道","由利高原鉄道","山形鉄道","天竜浜名湖鉄道","静岡鉄道","遠州鉄道","長良川鉄道","樽見鉄道","明知鉄道","三岐鉄道","伊勢鉄道","伊賀鉄道","えちぜん鉄道","北陸鉄道","福井鉄道","上田電鉄","長野電鉄","京都丹後鉄道","叡山電鉄","近江鉄道","信楽高原鐵道","水島臨海鉄道","智頭急行","若桜鉄道","井原鉄道","錦川鉄道","阿佐海岸鉄道","平成筑豊鉄道","甘木鉄道","松浦鉄道","南阿蘇鉄道","くま川鉄道","JR日高本線","JR津軽海峡線"];
+function routeLineReference(name){return ROUTE_LINE_REFERENCE_PREFIXES.some(prefix=>name.startsWith(prefix))||/^西鉄(天神大牟田|太宰府|甘木|貝塚)線$/.test(name)}
 let routeCatalogQuery="",routeCatalogGroup="all";
 function routeCatalogOpen(){
  routeSyncHeader();
@@ -1179,7 +1183,7 @@ function routeCatalogUpdate(){
  results.innerHTML=entries.length?entries.map(name=>{
   const color=routeLineColor(name);
   return '<div class="route-catalog-item"><span class="route-catalog-swatch" style="background:'+color+'" aria-hidden="true"></span>'
-   +'<span class="route-catalog-name">'+esc(name)+'</span><code class="route-catalog-hex">'+esc(color.toUpperCase())+'</code></div>';
+   +'<span class="route-catalog-name">'+esc(name)+(routeLineReference(name)?'<small class="route-catalog-ref">参考色</small>':'')+'</span><code class="route-catalog-hex">'+esc(color.toUpperCase())+'</code></div>';
  }).join(""):'<div class="note">該当する路線はありません。</div>';
 }
 
