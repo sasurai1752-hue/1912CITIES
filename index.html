@@ -1106,7 +1106,7 @@ function routeInsertStep(index,kind="move"){
 function routeCloseStep(){routeSyncHeader();routeExpandedStep=-1;render()}
 function routeToggleStep(i){routeSyncHeader();routeExpandedStep=routeExpandedStep===i?-1:i;render()}
 function routeToggleAdding(){routeSyncHeader();routeAdding=!routeAdding;render()}
-function routeUpdateLineColor(input){const node=input?.closest("label");if(!node)return;const dot=node.querySelector(".route-line-dot");if(dot)dot.style.background=routeLineColor(input.value)||"var(--muted,#999)"}
+function routeUpdateLineColor(input){const node=input?.closest(".route-line-field")||input?.closest("label");if(!node)return;const dot=node.querySelector(".route-line-dot");if(dot)dot.style.background=routeLineColor(input.value)||"var(--muted,#999)"}
 function routeStepChange(i,k,v){if(routeEditing?.steps[i]){routeEditing.steps[i][k]=v;if(k==="kind"){routeSyncHeader();routeExpandedStep=i;render()}}}
 // 追加路線: 固有のラインカラーがない路線は事業者の代表色を使用。
 // 同名の地下鉄路線を誤判定しないよう、追加路線は正規化した完全一致で照合する。
