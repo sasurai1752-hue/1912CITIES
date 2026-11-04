@@ -1265,18 +1265,35 @@ function routeOcrLegs(points,lines,spatial){
 }
 function routeOcrTextFallback(raw){
  const lines=String(raw||"").split(/\r?\n/).map(routeOcrClean).filter(Boolean);
- const time=/([01]?\d|2[0-3])[:：]([0-5]\d)/g,points=[];
+ // Yahoo!乗換案内の時刻行だけを採用する。画面上部の経路概要や運賃・番線は除外。
+ const events=[],time=/\b([01]?\d|2[0-3])[:：]([0-5]\d)\b/g;
  for(let i=0;i<lines.length;i++){
-  const matches=[...lines[i].matchAll(time)];
-  if(matches.length!==1||/[→⇒]/.test(lines[i]))continue;
+  const line=lines[i],matches=[...line.matchAll(time)];
+  if(matches.length!==1||/→|⇒|乗換\s*\d|\d+\s*km|IC優先|所要|運賃|料金/.test(line))continue;
   const clock=matches[0][1].padStart(2,"0")+":"+matches[0][2];
-  const rest=lines[i].replace(time,"").trim();
-  if(/\d+\s*分|月\s*\d+\s*日|[()（）]/.test(rest))continue;
-  const place=routeOcrPlace(rest)||routeOcrPlace(lines[i+1]||"");
-  if(!place||points.some(p=>p.time===clock&&p.place===place))continue;
-  points.push({place,time:clock,y:i});
+  let rest=line.replace(time,"").replace(/^[\s発着\d:：]+/,"").trim();
+  const candidates=[rest,...lines.slice(i+1,i+3)];
+  const place=candidates.map(routeOcrPlace).find(v=>v&&!/^(?:発|着|徒歩|降りて|乗換不要|支払|番線|のりば|おりば|京急本線|京急久里浜線|京急バス|\d+駅)/.test(v));
+  if(!place)continue;
+  const type=/発/.test(line)?"dep":/着/.test(line)?"arr":"unknown";
+  if(events.some(e=>e.time===clock&&e.place===place))continue;
+  events.push({place,time:clock,y:i,type});
  }
- return routeOcrLegs(points,lines,false);
+ // 同一地点の着→発は待ち時間であり移動区間にしない。
+ const steps=[];
+ for(let i=0;i<events.length-1;i++){
+  const a=events[i],b=events[i+1];
+  if(a.place===b.place||a.time===b.time||a.type==="arr"&&b.type==="dep"&&a.place===b.place)continue;
+  const part=lines.slice(a.y+1,b.y);
+  const walk=part.some(x=>/徒歩\s*\d+\s*分|降りてからの徒歩/.test(x));
+  const routes=part.filter(x=>/京急|JR|京王|小田急|東急|東武|西武|メトロ|都営|新幹線|バス|線特急/.test(x)&&!/乗車位置|運行情報|クレカ|決済|支払/.test(x));
+  const line=walk?"徒歩":routes.map(x=>x.replace(/^[^\p{Script=Han}A-Za-z]+/u,"").trim()).filter(Boolean).join(" → ").slice(0,70);
+  const step=routeOcrEmptyStep(a,b,line);
+  const bus=routes.join(" ").match(/(?:バス[・\s]*)?([一-龥ぁ-んァ-ヶ]{1,4}\s*\d{1,3})/);
+  if(bus&&/バス/.test(routes.join(" ")))step.busSystem=bus[1].replace(/\s/g,"");
+  steps.push(step);
+ }
+ return steps.slice(0,30);
 }
 function routeOcrBuildDraft(ocr){
  const source=[];
