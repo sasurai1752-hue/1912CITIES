@@ -1265,57 +1265,50 @@ function routeOcrLegs(points,lines,spatial){
 }
 function routeOcrTextFallback(raw){
  const lines=String(raw||"").split(/\r?\n/).map(routeOcrClean).filter(Boolean);
- // Yahoo!乗換案内の時刻行だけを採用する。画面上部の経路概要や運賃・番線は除外。
- const events=[],time=/\b([01]?\d|2[0-3])[:：]([0-5]\d)\b/g;
+ const events=[],clock=/([01]?\d|2[0-3])[:：]([0-5]\d)/;
  for(let i=0;i<lines.length;i++){
-  const line=lines[i],matches=[...line.matchAll(time)];
-  if(matches.length!==1||/→|⇒|乗換\s*\d|\d+\s*km|IC優先|所要|運賃|料金/.test(line))continue;
-  const clock=matches[0][1].padStart(2,"0")+":"+matches[0][2];
-  let rest=line.replace(time,"").replace(/^[\s発着\d:：]+/,"").trim();
+  const line=lines[i],times=[...line.matchAll(/([01]?\d|2[0-3])[:：]([0-5]\d)/g)];
+  if(times.length!==1||/→|⇒|IC優先|乗換\s*\d|km|所要|運賃|料金|月\d+日/.test(line))continue;
+  const t=times[0][1].padStart(2,"0")+":"+times[0][2];
+  const rest=line.replace(clock,"").replace(/^[\s発着]+/,"").trim();
+  const matchType=/発/.test(line)?"dep":/着/.test(line)?"arr":"unknown";
   const candidates=[rest,...lines.slice(i+1,i+3)];
-  const place=candidates.map(routeOcrPlace).find(v=>v&&!/^(?:発|着|徒歩|降りて|乗換不要|支払|番線|のりば|おりば|京急本線|京急久里浜線|京急バス|\d+駅)/.test(v));
+  const place=candidates.map(routeOcrPlace).find(v=>v&&!/^(?:発|着|徒歩|降りて|乗換不要|支払|番線|のりば|おりば|京急本線|京急久里浜線|京急バス|\d+駅)/.test(v)&&!/\d+円/.test(v));
   if(!place)continue;
-  const type=/発/.test(line)?"dep":/着/.test(line)?"arr":"unknown";
-  if(events.some(e=>e.time===clock&&e.place===place))continue;
-  events.push({place,time:clock,y:i,type});
+  if(!events.some(e=>e.time===t&&e.place===place))events.push({place,time:t,y:i,type:matchType});
  }
- // 同一地点の着→発は待ち時間であり移動区間にしない。
  const steps=[];
  for(let i=0;i<events.length-1;i++){
-  const a=events[i],b=events[i+1];
-  if(a.place===b.place||a.time===b.time||a.type==="arr"&&b.type==="dep"&&a.place===b.place)continue;
-  const part=lines.slice(a.y+1,b.y);
+  const from=events[i],to=events[i+1];
+  if(from.place===to.place||from.time===to.time)continue;
+  const part=lines.slice(from.y+1,to.y);
   const walk=part.some(x=>/徒歩\s*\d+\s*分|降りてからの徒歩/.test(x));
-  const routes=part.filter(x=>/京急|JR|京王|小田急|東急|東武|西武|メトロ|都営|新幹線|バス|線特急/.test(x)&&!/乗車位置|運行情報|クレカ|決済|支払/.test(x));
-  const line=walk?"徒歩":routes.map(x=>x.replace(/^[^\p{Script=Han}A-Za-z]+/u,"").trim()).filter(Boolean).join(" → ").slice(0,70);
-  const step=routeOcrEmptyStep(a,b,line);
-  const bus=routes.join(" ").match(/(?:バス[・\s]*)?([一-龥ぁ-んァ-ヶ]{1,4}\s*\d{1,3})/);
-  if(bus&&/バス/.test(routes.join(" ")))step.busSystem=bus[1].replace(/\s/g,"");
+  const routes=part.filter(x=>/(?:京急|JR|京王|小田急|東急|東武|西武|メトロ|都営|新幹線|バス|線特急)/.test(x)&&!/(?:乗車位置|運行情報|クレカ|決済|支払|駅\/)/.test(x));
+  const route=routes.filter(x=>/線|バス/.test(x)).map(x=>x.replace(/^[○●◎▶▷\s]+/,"").trim());
+  const line=walk?"徒歩":route.join(" → ").slice(0,80);
+  const step=routeOcrEmptyStep(from,to,line);
+  const bus=route.join(" ").match(/(?:バス[・\s]*)?([一-龥ぁ-んァ-ヶ]{1,4}\s*\d{1,3})/);
+  if(bus&&/バス/.test(route.join(" ")))step.busSystem=bus[1].replace(/\s/g,"");
   steps.push(step);
  }
  return steps.slice(0,30);
 }
 function routeOcrBuildDraft(ocr){
- const source=[];
- if(Array.isArray(ocr.lines))source.push(...ocr.lines);
- for(const b of ocr.blocks||[])for(const p of b.paragraphs||[])source.push(...(p.lines||[]));
- const rows=source.filter(v=>v.text&&v.bbox).map(v=>({text:routeOcrClean(v.text),x:v.bbox.x0,x2:v.bbox.x1,y:(v.bbox.y0+v.bbox.y1)/2})).sort((a,b)=>a.y-b.y||a.x-b.x);
- const width=Math.max(1,...rows.map(v=>v.x2)),points=[];
- const time=/([01]?\d|2[0-3])[:：]([0-5]\d)/g;
- for(const r of rows){
-  const matches=[...r.text.matchAll(time)];if(matches.length!==1||r.x>width*.4)continue;
-  const rest=r.text.replace(time,"").trim();
-  if(/\d+\s*分|月\s*\d+\s*日|[()（）]/.test(rest))continue;
-  const near=rows.filter(v=>Math.abs(v.y-r.y)<22&&v!==r).sort((a,b)=>b.x-a.x);
-  const place=routeOcrPlace(rest)||near.map(v=>routeOcrPlace(v.text)).find(Boolean);
-  if(!place)continue;
-  const clock=matches[0][1].padStart(2,"0")+":"+matches[0][2];
-  if(!points.some(p=>p.time===clock&&p.place===place))points.push({place,time:clock,y:r.y});
- }
- points.sort((a,b)=>a.y-b.y);
- const spatial=routeOcrLegs(points,rows,true),fallback=routeOcrTextFallback(ocr.text||"");
- const score=legs=>legs.reduce((n,l)=>n+1+(l.line?2:0),0);
- return score(spatial)>score(fallback)?spatial:fallback;
+ // 空間配置による曖昧な隣接推定より、発着イベントと移動種別を優先。
+ // OCRの行順は画像上の上下方向を維持し、同一停留所の待機は区間にしない。
+ const rows=[];
+ if(Array.isArray(ocr.lines))rows.push(...ocr.lines);
+ for(const b of ocr.blocks||[])for(const p of b.paragraphs||[])rows.push(...(p.lines||[]));
+ const positioned=rows.filter(x=>x.text&&x.bbox).map(x=>({text:routeOcrClean(x.text),y:x.bbox.y0,x:x.bbox.x0}));
+ positioned.sort((a,b)=>a.y-b.y||a.x-b.x);
+ const dedup=[];
+ for(const r of positioned)if(!dedup.some(v=>v.text===r.text&&Math.abs(v.y-r.y)<5))dedup.push(r);
+ const ordered=dedup.map(x=>x.text).join("\n");
+ const spatial=routeOcrTextFallback(ordered);
+ const plain=routeOcrTextFallback(ocr.text||"");
+ // 位置付きデータで駅名が崩れている場合は全文側を採用。
+ const quality=steps=>steps.reduce((n,x)=>n+(x.line?3:0)+(x.place&&x.to?2:0)-(/[〇○●QOF]/.test(x.place+x.to)?3:0),0);
+ return quality(spatial)>quality(plain)?spatial:plain;
 }
 function routeOcrDraftChange(i,k,v){if(routeOcrDraft[i]&&["place","to","time","endTime","line","busSystem"].includes(k))routeOcrDraft[i][k]=v}
 function routeOcrDraftRemove(i){routeOcrDraft.splice(i,1);const el=document.getElementById("routeOcrPreview");if(el)el.innerHTML=routeOcrPreviewHtml()}
