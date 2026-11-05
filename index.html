@@ -1245,8 +1245,14 @@ function routeOcrEmptyStep(from,to,line="",memo=""){
 
 function routeOcrClean(s){return String(s||"").normalize("NFKC").replace(/\s+/g," ").trim()}
 function routeOcrPlace(s){
- let v=routeOcrClean(s).replace(/^[○〇●◯◎QOF◆▶▷▼▽→⇒]+\s*/gi,"").replace(/\s+[○〇●◯◎QOF◆▶▷▼▽→⇒]+$/gi,"").replace(/([\u3040-\u30ff\u3400-\u9fff])\s+(?=[\u3040-\u30ff\u3400-\u9fff])/g,"$1").replace(/\s*\/\s*/g,"/").trim();
- if(!v||/^\d/.test(v)||/^(?:徒歩|乗換|運賃|料金|合計|所要|検索|乗車|降車|番線|ホーム|出口|路線|方面|到着|出発|乗り場|おりば|時刻|円|IC)/.test(v)||/[()（）→⇒]/.test(v)||/(?:分|円|km|番線)$/.test(v)||v.length>45)return "";
+ let v=routeOcrClean(s)
+  .replace(/^[\s発着:：○〇●◯◎QOF◆▶▷▼▽→⇒]+/gi,"")
+  .replace(/[\s○〇●◯◎QOF◆▶▷▼▽→⇒]+$/gi,"")
+  .replace(/([\u3040-\u30ff\u3400-\u9fff])\s+(?=[\u3040-\u30ff\u3400-\u9fff])/g,"$1")
+  .replace(/\s*\/\s*/g,"/").trim();
+ // Yahoo!の発着バッジ、路線アイコン由来の短い残骸だけを除去する。
+ v=v.replace(/\s+(?:ii|iii|N|Q|O|F)$/i,"").trim();
+ if(!v||/^\d/.test(v)||/^(?:徒歩|乗換|運賃|料金|合計|所要|検索|乗車|降車|番線|ホーム|出口|路線|方面|到着|出発|乗り場|おりば|時刻|円|IC|発\s*$|着\s*$)/.test(v)||/[()（）→⇒]/.test(v)||/(?:分|円|km|番線)$/.test(v)||v.length>45)return "";
  return v;
 }
 function routeOcrLegs(points,lines,spatial){
